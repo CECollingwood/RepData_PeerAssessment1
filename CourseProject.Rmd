@@ -1,0 +1,101 @@
+---
+title: "Coursera Project 1"
+author: "CECollingwood"
+date: "31/03/2020"
+output: html_document
+keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading and Preprocessing the data
+
+```{r load}
+dataraw <- read.csv("activity.csv", header=TRUE)
+library(dplyr)
+```
+
+## Mean Steps per day
+
+What is mean total number of steps taken per day?
+
+```{r total steps}
+totalsteps <- aggregate(dataraw$steps, by=list(date=dataraw$date), FUN=sum, na.rm=TRUE)
+colnames(totalsteps) <- c("date", "steps")
+hist(totalsteps$steps, main="Histogram of Total Steps per Day", xlab="Total Steps", breaks=10)
+mean<-mean(totalsteps$steps, na.rm=TRUE)
+median<-median(totalsteps$steps, na.rm=TRUE)
+paste("The mean total steps in a day is", mean, "and the median is", median, ".")
+```
+
+## Average Daily Activity Pattern
+Which 5 minute interval contains the maximum number of steps?
+
+```{r average pattern}
+totalinterval <- aggregate(dataraw$steps, by=list(interval=dataraw$interval), FUN=mean, na.rm=TRUE)
+colnames(totalinterval) <- c("interval", "steps")
+with(totalinterval, plot(interval, steps, xlab="Minute Interval", ylab = "mean number of steps", main = "Time-Series of mean number of steps",type = "l"))
+row<- totalinterval[which.max(totalinterval$steps),]
+paste("The interval with the largest average number of steps is interval", row$interval, ".")
+```
+
+## Number of Missing Values
+Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
+How many missing values are there?
+```{r missing values}
+sum(!complete.cases(dataraw[]))
+```
+
+
+## New Data Frame
+Creating a new data frame using mean value for that interval
+```{r newframe}
+newdata <- dataraw %>%
+  right_join(totalinterval, by = c("interval")) %>%
+  mutate(steps = ifelse(is.na(steps.x), steps.y, steps.x)) %>%
+  select(-c(steps.x, steps.y))
+```
+
+
+### New Mean Steps Per Day
+```{r new total steps}
+newtotalsteps <- aggregate(newdata$steps, by=list(date=newdata$date), FUN=sum, na.rm=TRUE)
+colnames(newtotalsteps) <- c("date", "steps")
+hist(newtotalsteps$steps, main="Histogram of Total Steps per Day", xlab="Total Steps", breaks=10)
+newmean<-mean(newtotalsteps$steps, na.rm=TRUE)
+newmedian<-median(newtotalsteps$steps, na.rm=TRUE)
+paste("The new mean total steps in a day is", newmean, "and the median is", newmedian, ", instead of", mean, "and", median, "respectively.")
+```
+Both the mean and the median have increased value, but they are now identical estimates.
+
+
+
+## Weekdays and Weekends
+```{r Weekdays}
+newdata$date<-as.Date(newdata$date, format = "%Y-%m-%d")
+newdata$daytype<-weekdays(newdata$date)
+weekdays <- subset(newdata, daytype == "Monday" | daytype == "Tuesday" | daytype == "Wednesday" | daytype == "Thursday" | daytype == "Friday")
+weekends <-subset(newdata, daytype == "Saturday" | daytype == "Sunday")
+
+weekdayinterval <- aggregate(weekdays$steps, by=list(interval=weekdays$interval), FUN=mean, na.rm=TRUE)
+colnames(weekdayinterval) <- c("interval", "steps")
+weekendinterval <- aggregate(weekends$steps, by=list(interval=weekends$interval), FUN=mean, na.rm=TRUE)
+colnames(weekendinterval) <- c("interval", "steps")
+par(mfrow = c(2,1))
+with(weekdayinterval, plot(interval, steps, xlab="Minute Interval", ylab = "mean number of steps", main = "Weekdays",type = "l"))
+with(weekendinterval, plot(interval, steps, xlab="Minute Interval", ylab = "mean number of steps", main = "Weekends",type = "l"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
